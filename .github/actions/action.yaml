@@ -1,0 +1,33 @@
+name: 'Working Hours'
+description: 'Check if the env is allowed o blocked to deploy'
+inputs:
+  strategy_matrix:
+    description: 'Get matrix to check working hours deployment'
+    required: true
+outputs:
+  release_time:
+    description: 'result of release time'
+    value: ${{ steps.working_hours.outputs.release_time }}
+
+runs:
+  using: composite
+  steps:
+  - name: Working hours
+    id: working_hours
+    if: (inputs.strategy_matrix == 'prod' || inputs.strategy_matrix == 'staging')
+    run: |
+      #!/bin/bash
+      # Using GMT timezone to set working hours
+      currenttime=$(TZ="GMT" date +%H:%M)
+      weekdaynum=$(date +"%u")
+      # Deploy from Monday to Thursday
+      if [ "$weekdaynum" -lt "5" ] && [ "$currenttime" \> "13:00" ] && [ "$currenttime" \< "20:00" ]; then
+        release_time="allowed"
+        echo "release_time=${release_time}" >> $GITHUB_OUTPUT
+        echo "Allowed"
+      else
+        release_time="blocked"
+        echo "release_time=${release_time}" >> $GITHUB_OUTPUT
+        echo "Deploy blocked due to working hours limits"
+      fi
+    shell: bash
